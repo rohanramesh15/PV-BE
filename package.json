@@ -1,0 +1,19 @@
+{
+  "name": "pv-be",
+  "version": "1.0.0",
+  "description": "## Setup ```bash python3 -m venv venv source venv/bin/activate  # On Windows: venv\\Scripts\\activate pip install -r requirements.txt ```",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohanramesh15/PV-BE.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rohanramesh15/PV-BE/issues"
+  },
+  "homepage": "https://github.com/rohanramesh15/PV-BE#readme"
+}
