@@ -1,0 +1,11 @@
+# Minimal requirements for CLIP-only comparison
+
+torch
+torchvision
+Pillow
+numpy
+scipy
+
+# CLIP installation:
+# pip install ftfy regex
+# pip install git+https://github.com/openai/CLIP.git
