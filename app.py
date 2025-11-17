@@ -16,12 +16,13 @@ CORS(app)  # Enable CORS for all routes
 # In-memory storage for team scores
 scores = {
     "team1": 0,
-    "team2": 0
+    "team2": 3
 }
 
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
     """Get current scores for both teams"""
+    print("scores requested")
     return jsonify(scores)
 
 
@@ -63,14 +64,12 @@ def upload_image():
         
         # Optional: Process image with PIL
         image = Image.open(io.BytesIO(image_data)).convert('RGB')
-        result = compare_with_clip(image, "Riley1.jpg", "Rohan1.jpg")
-        if result == "Riley1.jpg":
-            scores['team1'] += 1
-        else:
-            scores['team2'] += 1
-        
-        # Save the file
-        
+        result = compare_with_clip(image, "./image_compare/images/Riley1.jpg", "./image_compare/images/Rohan1.jpg")
+        team = 'team2'
+        if result['best_match'] == 1:
+            team = 'team1'
+        scores[team] += 1 
+        print(scores)       
         
         # Get additional form data if any
         description = request.form.get('description', '')
@@ -79,9 +78,13 @@ def upload_image():
         return jsonify({
             'message': 'Image uploaded successfully',
             'filename': filename,
+            "team": team,
+            "newScore": scores[team],
+            "allScores": scores
         }), 200
         
     except Exception as e:
+        print(e)
         return jsonify({'error': str(e)}), 500
 
 

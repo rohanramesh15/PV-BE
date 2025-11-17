@@ -38,19 +38,19 @@ class CLIPComparator:
             option1_path: First option
             option2_path: Second option
         """
-        self.img_a_stream = image_a_stream
+        self.image_a_stream = image_a_stream
         self.opt1_path = option1_path
         self.opt2_path = option2_path
         
         # Use GPU if available
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"🔧 Using device: {self.device}")
+        #print(f"🔧 Using device: {self.device}")
         
         # Load CLIP model
-        print("📦 Loading CLIP model (ViT-B/32)...")
+        #print("📦 Loading CLIP model (ViT-B/32)...")
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
         self.model.eval()
-        print("✅ CLIP model loaded successfully!\n")
+        #print("✅ CLIP model loaded successfully!\n")
     
     def extract_features(self, image_path):
         """
@@ -99,14 +99,15 @@ class CLIPComparator:
         Returns:
             dict with probabilities and match information
         """
-        print("🔍 Extracting CLIP features from images...")
+        #print("🔍 Extracting CLIP features from images...")
         
         # Extract features for all images
-        feat_a = self.extract_features_stream(self.image_a_stream)
         feat_opt1 = self.extract_features(self.opt1_path)
         feat_opt2 = self.extract_features(self.opt2_path)
+        feat_a = self.extract_features_stream(self.image_a_stream)
+
         
-        print("📊 Computing similarities...")
+        #print("📊 Computing similarities...")
         
         # Calculate cosine similarity (1 - cosine_distance)
         # Values closer to 1.0 mean more similar
@@ -137,18 +138,18 @@ class CLIPComparator:
             confidence = "LOW"
         
         # Print results
-        print("\n" + "=" * 70)
-        print("🎯 CLIP COMPARISON RESULTS")
-        print("=" * 70)
-        print(f"Raw Similarities:")
-        print(f"  Option 1: {similarity1:.4f}")
-        print(f"  Option 2: {similarity2:.4f}")
-        print(f"\nProbabilities:")
-        print(f"  Option 1: {prob1:.2%}")
-        print(f"  Option 2: {prob2:.2%}")
-        print(f"\n✅ BEST MATCH: Option {best_match}")
-        print(f"📊 Confidence: {confidence} ({max(prob1, prob2):.1%})")
-        print("=" * 70)
+        #print("\n" + "=" * 70)
+        #print("🎯 CLIP COMPARISON RESULTS")
+        #print("=" * 70)
+        #print(f"Raw Similarities:")
+        #print(f"  Option 1: {similarity1:.4f}")
+        #print(f"  Option 2: {similarity2:.4f}")
+        #print(f"\nProbabilities:")
+        #print(f"  Option 1: {prob1:.2%}")
+        #print(f"  Option 2: {prob2:.2%}")
+        #print(f"\n✅ BEST MATCH: Option {best_match}")
+        #print(f"📊 Confidence: {confidence} ({max(prob1, prob2):.1%})")
+        #print("=" * 70)
         
         return {
             'option1_probability': prob1,
