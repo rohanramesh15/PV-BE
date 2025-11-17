@@ -16,13 +16,12 @@ CORS(app)  # Enable CORS for all routes
 # In-memory storage for team scores
 scores = {
     "team1": 0,
-    "team2": 3
+    "team2": 0
 }
 
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
     """Get current scores for both teams"""
-    print("scores requested")
     return jsonify(scores)
 
 
@@ -68,8 +67,7 @@ def upload_image():
         team = 'team2'
         if result['best_match'] == 1:
             team = 'team1'
-        scores[team] += 1 
-        print(scores)       
+        scores[team] += 1     
         
         # Get additional form data if any
         description = request.form.get('description', '')
