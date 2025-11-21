@@ -19,6 +19,18 @@ scores = {
     "team2": 0
 }
 
+try:
+    import clip
+    CLIP_AVAILABLE = True
+except ImportError:
+    CLIP_AVAILABLE = False
+    print("❌ ERROR: CLIP not installed!")
+    print("Install with:")
+    print("  pip install ftfy regex") 
+    print("  pip install git+https://github.com/openai/CLIP.git")
+    raise ImportError("CLIP is required for this script")
+
+
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
     """Get current scores for both teams"""
@@ -67,7 +79,7 @@ def upload_image():
         team = 'team2'
         if result['best_match'] == 1:
             team = 'team1'
-        scores[team] += 1     
+        scores[team] += 1   
         
         # Get additional form data if any
         description = request.form.get('description', '')
