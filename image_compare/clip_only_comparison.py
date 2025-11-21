@@ -29,7 +29,7 @@ class CLIPComparator:
     Best for distinguishing between very similar images
     """
     
-    def __init__(self, image_a_stream, option1_path, option2_path):
+    def __init__(self, option1_path, option2_path):
         """
         Initialize with image paths
         
@@ -38,7 +38,7 @@ class CLIPComparator:
             option1_path: First option
             option2_path: Second option
         """
-        self.image_a_stream = image_a_stream
+        #self.image_a_stream = image_a_stream
         self.opt1_path = option1_path
         self.opt2_path = option2_path
         
@@ -51,6 +51,9 @@ class CLIPComparator:
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
         self.model.eval()
         #print("✅ CLIP model loaded successfully!\n")
+
+        self.feat_opt1 = self.extract_features(self.opt1_path)
+        self.feat_opt2 = self.extract_features(self.opt2_path)
     
     def extract_features(self, image_path):
         """
@@ -87,7 +90,7 @@ class CLIPComparator:
         
         return features.cpu().numpy().flatten()
     
-    def compare(self, amplification_factor=20):
+    def compare(self, image_a_stream, amplification_factor=20):
         """
         Compare images and return probabilities
         
@@ -102,9 +105,9 @@ class CLIPComparator:
         #print("🔍 Extracting CLIP features from images...")
         
         # Extract features for all images
-        feat_opt1 = self.extract_features(self.opt1_path)
-        feat_opt2 = self.extract_features(self.opt2_path)
-        feat_a = self.extract_features_stream(self.image_a_stream)
+        feat_opt1 = self.feat_opt1
+        feat_opt2 = self.feat_opt2
+        feat_a = self.extract_features_stream(image_a_stream)
 
         
         #print("📊 Computing similarities...")
@@ -179,7 +182,7 @@ def compare_with_clip(image_a, option1, option2, amplification=20):
         print(f"Match: Option {result['best_match']}")
         print(f"Confidence: {result['confidence']}")
     """
-    comparator = CLIPComparator(image_a, option1, option2)
+    comparator = CLIPComparator(option1, option2)
     return comparator.compare(amplification_factor=amplification)
 
 

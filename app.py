@@ -1,9 +1,10 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+from time import time_ns
 
 
-from image_compare.clip_only_comparison import compare_with_clip
+from image_compare.clip_only_comparison import CLIPComparator
 
 import os
 
@@ -30,6 +31,10 @@ except ImportError:
     print("  pip install git+https://github.com/openai/CLIP.git")
     raise ImportError("CLIP is required for this script")
 
+comparator = CLIPComparator("./image_compare/images/Riley1.jpg", "./image_compare/images/Rohan1.jpg")
+
+runtimes = []
+
 
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
@@ -53,6 +58,8 @@ def allowed_file(filename):
 @app.route('/upload', methods=['POST'])
 def upload_image():
     try:
+        start_time = time_ns()
+        print("Started!")
         # Check if image is in request
         if 'image' not in request.files:
             return jsonify({'error': 'No image provided'}), 400
@@ -75,12 +82,19 @@ def upload_image():
         
         # Optional: Process image with PIL
         image = Image.open(io.BytesIO(image_data)).convert('RGB')
-        result = compare_with_clip(image, "./image_compare/images/Riley1.jpg", "./image_compare/images/Rohan1.jpg")
+        result = comparator.compare(image_a_stream=image)
         team = 'team2'
         if result['best_match'] == 1:
             team = 'team1'
         scores[team] += 1   
+
+        end_time = time_ns()
+        print("Ended! Took " + str(end_time-start_time) + " nanoseconds")
         
+        runtimes.append(end_time-start_time)
+        if len(runtimes)%20 == 0:
+            print("Average Runtime: " + str(sum(runtimes) / len(runtimes) ))
+
         # Get additional form data if any
         description = request.form.get('description', '')
         
