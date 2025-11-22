@@ -27,7 +27,7 @@ except ImportError:
     CLIP_AVAILABLE = False
     print("❌ ERROR: CLIP not installed!")
     print("Install with:")
-    print("  pip install ftfy regex") 
+    print("  pip install ftfy regex")
     print("  pip install git+https://github.com/openai/CLIP.git")
     raise ImportError("CLIP is required for this script")
 
@@ -55,7 +55,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@app.route('/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST'])
 def upload_image():
     try:
         start_time = time_ns()
@@ -97,7 +97,7 @@ def upload_image():
 
         # Get additional form data if any
         description = request.form.get('description', '')
-        
+
         # Return success response
         return jsonify({
             'message': 'Image uploaded successfully',
@@ -133,6 +133,7 @@ def increment_score():
 @app.route('/api/scores/reset', methods=['POST'])
 def reset_scores():
     """Reset all scores to zero"""
+    
     scores["team1"] = 0
     scores["team2"] = 0
     return jsonify({
