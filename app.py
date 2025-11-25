@@ -3,6 +3,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from time import time_ns
 import logging
+from dotenv import load_dotenv
 
 
 from image_compare.clip_only_comparison import CLIPComparator
@@ -13,9 +14,18 @@ from PIL import Image
 import io
 logger = logging.getLogger()
 
+# Load environment variables from .env file (for local development)
+load_dotenv()
+
+# Configure CORS origins from environment variable
+cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3001,http://localhost:3002')
+allowed_origins = [origin.strip() for origin in cors_origins.split(',')]
+
+logger.info(f"CORS enabled for origins: {allowed_origins}")
+
 app = Flask(__name__)
-CORS(app)
-  # Enable CORS for all routes
+CORS(app, origins=allowed_origins, supports_credentials=True)
+  # Enable CORS for specified origins only
 
 # In-memory storage for team scores
 scores = {
@@ -148,4 +158,4 @@ def reset_scores():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)
