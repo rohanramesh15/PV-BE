@@ -4,10 +4,12 @@ Lightweight alternative for deployment on memory-constrained platforms
 """
 
 import replicate
+from replicate.exceptions import ReplicateError
 import numpy as np
 from scipy.spatial.distance import cosine
 import base64
 import io
+import time
 
 
 class CLIPComparator:
@@ -30,19 +32,29 @@ class CLIPComparator:
         self.feat_opt2 = self._get_embedding_from_file(option2_path)
         print("Reference embeddings loaded successfully!")
 
-    def _get_embedding_from_file(self, image_path):
-        """Get CLIP embedding from a local file path"""
+    def _get_embedding_from_file(self, image_path, max_retries=5, initial_delay=2):
+        """Get CLIP embedding from a local file path with retry logic for rate limits"""
         with open(image_path, "rb") as f:
             data = base64.b64encode(f.read()).decode()
             ext = image_path.split('.')[-1].lower()
             mime = "image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
             data_uri = f"data:{mime};base64,{data}"
 
-        output = replicate.run(
-            "openai/clip",
-            input={"image": data_uri}
-        )
-        return np.array(output["embedding"])
+        delay = initial_delay
+        for attempt in range(max_retries):
+            try:
+                output = replicate.run(
+                    "openai/clip",
+                    input={"image": data_uri}
+                )
+                return np.array(output["embedding"])
+            except ReplicateError as e:
+                if e.status == 429 and attempt < max_retries - 1:
+                    print(f"Rate limited, waiting {delay}s before retry ({attempt + 1}/{max_retries})...")
+                    time.sleep(delay)
+                    delay *= 2  # Exponential backoff
+                else:
+                    raise
 
     def _get_embedding_from_pil(self, pil_image):
         """Get CLIP embedding from a PIL Image object"""
