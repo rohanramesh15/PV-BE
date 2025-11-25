@@ -8,7 +8,6 @@ import numpy as np
 from scipy.spatial.distance import cosine
 import base64
 import io
-import os
 
 
 class CLIPComparator:
@@ -25,10 +24,6 @@ class CLIPComparator:
         self.opt1_path = option1_path
         self.opt2_path = option2_path
 
-        # Explicitly create client with token from environment
-        # This fixes the import-time token caching issue
-        self.client = replicate.Client(api_token=os.environ.get("REPLICATE_API_TOKEN"))
-
         # Pre-compute embeddings for reference images (2 API calls at startup)
         print("Loading reference image embeddings via Replicate API...")
         self.feat_opt1 = self._get_embedding_from_file(option1_path)
@@ -43,7 +38,7 @@ class CLIPComparator:
             mime = "image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
             data_uri = f"data:{mime};base64,{data}"
 
-        output = self.client.run(
+        output = replicate.run(
             "openai/clip",
             input={"image": data_uri}
         )
@@ -56,7 +51,7 @@ class CLIPComparator:
         data = base64.b64encode(buffer.getvalue()).decode()
         data_uri = f"data:image/jpeg;base64,{data}"
 
-        output = self.client.run(
+        output = replicate.run(
             "openai/clip",
             input={"image": data_uri}
         )

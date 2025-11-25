@@ -1,21 +1,21 @@
+import os
+from dotenv import load_dotenv
+
+# Load environment variables FIRST before any other imports that use them
+load_dotenv()
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from time import time_ns
 import logging
-from dotenv import load_dotenv
 
-
+# Import after load_dotenv so replicate sees the env vars
 from image_compare.clip_only_comparison import CLIPComparator
-
-import os
 
 from PIL import Image
 import io
 logger = logging.getLogger()
-
-# Load environment variables from .env file (for local development)
-load_dotenv()
 
 # Configure CORS origins from environment variable
 cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3001,http://localhost:3002')
@@ -67,34 +67,34 @@ def upload_image():
         # Check if image is in request
         if 'image' not in request.files:
             return jsonify({'error': 'No image provided'}), 400
-        
+
         file = request.files['image']
-        
+
         # Check if file is selected
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        
+
         # Check if file type is allowed
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type'}), 400
-        
+
         # Secure the filename
         filename = secure_filename(file.filename)
-        
+
         # Read image data
         image_data = file.read()
-        
+
         # Optional: Process image with PIL
         image = Image.open(io.BytesIO(image_data)).convert('RGB')
         result = comparator.compare(image_a_stream=image)
         team = 'team2'
         if result['best_match'] == 1:
             team = 'team1'
-        scores[team] += 1   
+        scores[team] += 1
 
         end_time = time_ns()
         print("Ended! Took " + str(end_time-start_time) + " nanoseconds")
-        
+
         runtimes.append(end_time-start_time)
         if len(runtimes)%20 == 0:
             print("Average Runtime: " + str(sum(runtimes) / len(runtimes) ))
@@ -110,7 +110,7 @@ def upload_image():
             "newScore": scores[team],
             "allScores": scores
         }), 200
-        
+
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
@@ -137,7 +137,7 @@ def increment_score():
 @app.route('/api/scores/reset', methods=['POST'])
 def reset_scores():
     """Reset all scores to zero"""
-    
+
     scores["team1"] = 0
     scores["team2"] = 0
     return jsonify({
