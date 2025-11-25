@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from time import time_ns
+import logging
 
 
 from image_compare.clip_only_comparison import CLIPComparator
@@ -10,9 +11,11 @@ import os
 
 from PIL import Image
 import io
+logger = logging.getLogger()
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, origins=["https://pv-fe-user.onrender.com", "https://pv-fe-display-new.onrender.com/"])
+  # Enable CORS for all routes
 
 # In-memory storage for team scores
 scores = {
@@ -40,6 +43,7 @@ runtimes = []
 def get_scores():
     """Get current scores for both teams"""
     return jsonify(scores)
+
 
 
 # Configuration
@@ -142,5 +146,5 @@ def reset_scores():
     })
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
