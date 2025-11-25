@@ -14,7 +14,7 @@ import io
 logger = logging.getLogger()
 
 app = Flask(__name__)
-CORS(app, origins=["https://pv-fe-user.onrender.com", "https://pv-fe-display-new.onrender.com/"])
+CORS(app)
   # Enable CORS for all routes
 
 # In-memory storage for team scores
@@ -42,6 +42,7 @@ runtimes = []
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
     """Get current scores for both teams"""
+    print("successfully sent the score")
     return jsonify(scores)
 
 
