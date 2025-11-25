@@ -1,135 +1,90 @@
 """
-CLIP-Only Image Comparison
-Uses only the CLIP model for maximum accuracy with dancing/similar images
-Fast and highly accurate - perfect for your use case
+CLIP Image Comparison using Replicate API
+Lightweight alternative for deployment on memory-constrained platforms
 """
 
-import torch
+import replicate
 import numpy as np
-from PIL import Image
 from scipy.spatial.distance import cosine
-import warnings
-warnings.filterwarnings('ignore')
-
-try:
-    import clip
-    CLIP_AVAILABLE = True
-except ImportError:
-    CLIP_AVAILABLE = False
-    print("❌ ERROR: CLIP not installed!")
-    print("Install with:")
-    print("  pip install ftfy regex")
-    print("  pip install git+https://github.com/openai/CLIP.git")
-    raise ImportError("CLIP is required for this script")
+import base64
+import io
+import os
 
 
 class CLIPComparator:
     """
-    High-accuracy image comparison using ONLY CLIP model
-    Best for distinguishing between very similar images
+    Image comparison using Replicate's hosted CLIP model.
+    Same interface as the local version for drop-in replacement.
     """
-    
+
     def __init__(self, option1_path, option2_path):
         """
-        Initialize with image paths
-        
-        Args:
-            image_a_path: Reference image
-            option1_path: First option
-            option2_path: Second option
+        Initialize with image paths.
+        Pre-computes embeddings for reference images at startup.
         """
-        #self.image_a_stream = image_a_stream
         self.opt1_path = option1_path
         self.opt2_path = option2_path
-        
-        # Use GPU if available
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        #print(f"🔧 Using device: {self.device}")
-        
-        # Load CLIP model
-        #print("📦 Loading CLIP model (ViT-B/32)...")
-        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
-        self.model.eval()
-        #print("✅ CLIP model loaded successfully!\n")
 
-        self.feat_opt1 = self.extract_features(self.opt1_path)
-        self.feat_opt2 = self.extract_features(self.opt2_path)
-    
-    def extract_features(self, image_path):
-        """
-        Extract CLIP visual features from an image
-        
-        Args:
-            image_path: Path to image
-            
-        Returns:
-            numpy array of normalized features
-        """
-        # Load and preprocess image
-        image = Image.open(image_path).convert('RGB')
-        image_input = self.preprocess(image).unsqueeze(0).to(self.device)
-        
-        # Extract features
-        with torch.no_grad():
-            features = self.model.encode_image(image_input)
-            # Normalize features (important for cosine similarity)
-            features = features / features.norm(dim=-1, keepdim=True)
-        
-        return features.cpu().numpy().flatten()
-    
-    def extract_features_stream(self, image):
-        """
-        """
-        image_input = self.preprocess(image).unsqueeze(0).to(self.device)
-        
-        # Extract features
-        with torch.no_grad():
-            features = self.model.encode_image(image_input)
-            # Normalize features (important for cosine similarity)
-            features = features / features.norm(dim=-1, keepdim=True)
-        
-        return features.cpu().numpy().flatten()
-    
+        # Pre-compute embeddings for reference images (2 API calls at startup)
+        print("Loading reference image embeddings via Replicate API...")
+        self.feat_opt1 = self._get_embedding_from_file(option1_path)
+        self.feat_opt2 = self._get_embedding_from_file(option2_path)
+        print("Reference embeddings loaded successfully!")
+
+    def _get_embedding_from_file(self, image_path):
+        """Get CLIP embedding from a local file path"""
+        with open(image_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode()
+            ext = image_path.split('.')[-1].lower()
+            mime = "image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
+            data_uri = f"data:{mime};base64,{data}"
+
+        output = replicate.run(
+            "openai/clip",
+            input={"image": data_uri}
+        )
+        return np.array(output["embedding"])
+
+    def _get_embedding_from_pil(self, pil_image):
+        """Get CLIP embedding from a PIL Image object"""
+        buffer = io.BytesIO()
+        pil_image.save(buffer, format="JPEG")
+        data = base64.b64encode(buffer.getvalue()).decode()
+        data_uri = f"data:image/jpeg;base64,{data}"
+
+        output = replicate.run(
+            "openai/clip",
+            input={"image": data_uri}
+        )
+        return np.array(output["embedding"])
+
     def compare(self, image_a_stream, amplification_factor=20):
         """
-        Compare images and return probabilities
-        
+        Compare uploaded image against the two reference options.
+
         Args:
-            amplification_factor: Higher values make probabilities more extreme (default: 20)
-                                 Use 10-15 for more conservative probabilities
-                                 Use 20-30 for more confident probabilities
-        
+            image_a_stream: PIL Image object to compare
+            amplification_factor: Higher values = more extreme probabilities
+
         Returns:
             dict with probabilities and match information
         """
-        #print("🔍 Extracting CLIP features from images...")
-        
-        # Extract features for all images
-        feat_opt1 = self.feat_opt1
-        feat_opt2 = self.feat_opt2
-        feat_a = self.extract_features_stream(image_a_stream)
+        feat_a = self._get_embedding_from_pil(image_a_stream)
 
-        
-        #print("📊 Computing similarities...")
-        
         # Calculate cosine similarity (1 - cosine_distance)
-        # Values closer to 1.0 mean more similar
-        similarity1 = 1 - cosine(feat_a, feat_opt1)
-        similarity2 = 1 - cosine(feat_a, feat_opt2)
-        
-        # Convert similarities to probabilities using exponential
-        # This amplifies small differences
+        similarity1 = 1 - cosine(feat_a, self.feat_opt1)
+        similarity2 = 1 - cosine(feat_a, self.feat_opt2)
+
+        # Convert to probabilities using exponential amplification
         exp_sim1 = np.exp(similarity1 * amplification_factor)
         exp_sim2 = np.exp(similarity2 * amplification_factor)
         total = exp_sim1 + exp_sim2
-        
+
         prob1 = exp_sim1 / total
         prob2 = exp_sim2 / total
-        
-        # Determine best match
+
         best_match = 1 if prob1 > prob2 else 2
-        
-        # Calculate confidence level
+
         prob_diff = abs(prob1 - prob2)
         if prob_diff > 0.4:
             confidence = "VERY HIGH"
@@ -139,21 +94,7 @@ class CLIPComparator:
             confidence = "MODERATE"
         else:
             confidence = "LOW"
-        
-        # Print results
-        #print("\n" + "=" * 70)
-        #print("🎯 CLIP COMPARISON RESULTS")
-        #print("=" * 70)
-        #print(f"Raw Similarities:")
-        #print(f"  Option 1: {similarity1:.4f}")
-        #print(f"  Option 2: {similarity2:.4f}")
-        #print(f"\nProbabilities:")
-        #print(f"  Option 1: {prob1:.2%}")
-        #print(f"  Option 2: {prob2:.2%}")
-        #print(f"\n✅ BEST MATCH: Option {best_match}")
-        #print(f"📊 Confidence: {confidence} ({max(prob1, prob2):.1%})")
-        #print("=" * 70)
-        
+
         return {
             'option1_probability': prob1,
             'option2_probability': prob2,
@@ -162,68 +103,3 @@ class CLIPComparator:
             'similarity1': similarity1,
             'similarity2': similarity2
         }
-
-
-def compare_with_clip(image_a, option1, option2, amplification=20):
-    """
-    Quick function to compare images using CLIP
-    
-    Args:
-        image_a: Path to reference image
-        option1: Path to first option
-        option2: Path to second option
-        amplification: How much to amplify differences (default: 20)
-    
-    Returns:
-        dict with keys: option1_probability, option2_probability, best_match, confidence
-    
-    Example:
-        result = compare_with_clip("dancer.jpg", "person_a.jpg", "person_b.jpg")
-        print(f"Match: Option {result['best_match']}")
-        print(f"Confidence: {result['confidence']}")
-    """
-    comparator = CLIPComparator(option1, option2)
-    return comparator.compare(amplification_factor=amplification)
-
-
-# Example usage
-if __name__ == "__main__":
-    print("\n🎭 CLIP-ONLY IMAGE COMPARISON")
-    print("=" * 70)
-    print("High accuracy comparison using state-of-the-art CLIP model")
-    print("=" * 70)
-    
-    # Replace with your actual image paths
-    image_a = "Riley2.jpg"
-    option_1 = "Riley3.jpg"
-    option_2 = "Vadin1.jpg"
-    
-    try:
-        # Run comparison
-        result = compare_with_clip(image_a, option_1, option_2)
-        
-        # Print quick summary
-        print(f"\n🔥 QUICK ANSWER:")
-        print(f"   Match: Option {result['best_match']}")
-        print(f"   Confidence: {result['confidence']}")
-        print(f"   Probability: {max(result['option1_probability'], result['option2_probability']):.1%}")
-
-        #team = "team1"
-        #if result['best_match'] != option_1:
-        #    team = "team2"
-
-        #return team
-
-
-        # Access detailed results
-        #print(f"\n📈 DETAILED PROBABILITIES:")
-        #print(f"   Option 1: {result['option1_probability']:.2%}")
-        #print(f"   Option 2: {result['option2_probability']:.2%}")
-        
-    except FileNotFoundError:
-        pass
-        #print("\n⚠️  Example images not found!")
-        #print("Replace the image paths above with your actual images:")
-        #print(f"  - {image_a}")
-        #print(f"  - {option_1}")
-        #print(f"  - {option_2}")

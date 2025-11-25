@@ -33,17 +33,6 @@ scores = {
     "team2": 0
 }
 
-try:
-    import clip
-    CLIP_AVAILABLE = True
-except ImportError:
-    CLIP_AVAILABLE = False
-    print("❌ ERROR: CLIP not installed!")
-    print("Install with:")
-    print("  pip install ftfy regex")
-    print("  pip install git+https://github.com/openai/CLIP.git")
-    raise ImportError("CLIP is required for this script")
-
 comparator = CLIPComparator("./image_compare/images/Riley1.jpg", "./image_compare/images/Rohan1.jpg")
 
 runtimes = []
