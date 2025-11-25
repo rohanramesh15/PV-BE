@@ -33,7 +33,7 @@ scores = {
     "team2": 0
 }
 
-comparator = CLIPComparator("./image_compare/images/Riley1.jpg", "./image_compare/images/Rohan1.jpg")
+comparator = CLIPComparator("./image_compare/images/team1.jpg", "./image_compare/images/team2.jpg")
 
 runtimes = []
 
